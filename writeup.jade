@@ -1,0 +1,30 @@
+p.dropcap So we found ourselvs with a lot of rubber ducks. It was kind of one of those situations where you wanted just one of something and you end up with one container instead of one individual. So with all these rubber ducks we had an idea to use the ducks as a physical control for some kind of interaction. 
+
+p The easiest cheapest way for us to make the ducks interactive was to use computer vision. We have been talking about wanting to build a #[a(href='https://en.wikipedia.org/wiki/Music_sequencer') step sequencer] for a while and have been pitching one as part of various projects. Given that a step sequencer has a lot of controls it seemed like a good fit for our army of ducks. 
+
+img.fullbleed-img(src=document.image, alt='')
+
+p The hardware for this project was a high def webcam suspended above a taped off grid and then obviously the ducks. Software-wise there were two main parts, the computer vision system and the audio playback system. The computer vision application was written in #[a(href='http://processing.org') Processing 2]  using with Greg Borenstein's (github.com/atduskgreg) OpenCV library. The audio playback system was built with Pure Data. #[a(href='http://puredata.info') Pure Data (PD) ] is an open source patch based programing language inspired by Cycling 74's Max/MSP. Patch based programing languages are often used when working with audio systems (partly due to their similarity to physical audio systems). 
+
+p The general algorithm was to find yellow objects containing a redish blob (the bill) and determine it's position relative to a virtual grid (which hopefully aligned with a grid in the "real" world) the position would correspond to an "on" position in the step sequencer grid. The on and off positions would then be sent to the Pure Data patch via Open Sound Control (OSC) which is a standardized system for transferring data between media applications (we used #[a(href='http://www.sojamo.de/libraries/oscP5/') oscP5] library for processing BTW). 
+
+p PD proved to be a very good system for audio playback and while I had never used it before was pretty easy to pick up due to it's similarity to Touch Designer a piece of software I'd been using for more visual output on some recent projects. 
+
+p The base of the project was the ImageFilteringWithBlobPersistence example form the #[a(href='https://github.com/atduskgreg/opencv-processing') OpenCV for Processing] library. In order to find our duck bodies I used a combination of hue and brightness filtering. First I would grab the color RGB frame then I converted to HSB and took the hue and brightness channels separately. For the hue channel I made two copies and applied a threshold with a lower bound and an inverse threshold with a higher bound. By running a logical AND filter on these two channels I created a mask for all the pixels in a particular hue range. I did the same thing with the brightness channel. Now taking the new brightness and hue masks and running a logical AND filter on these we bet a mask of pixels that are in a particular hue and brightness range. Luckily the ducks are in a pretty narrow hue and brightness range. 
+
+p After achieving our final mask I ran a dilate and erode filter to remove some noise and then a blur to expand the edges a little. This results in an image which is hopefully just the out lines of the body. I fed this image into OpenCV's find Contours system which results in a list of rectangles. I used some of the existing demo code to maintain blobs frame to frame. I ran the same series of filters with different ranges to find the bills of the ducks. 
+
+p I should mention that all of the threshold values and the contour finding settings were controlled via #[a(href='http://www.sojamo.de/libraries/controlP5/') ControlP5] sliders and range controls. Having the ability to adjust these values on the fly is critical to efficient work flow. 
+
+p Once I had body blobs and bill blobs I did a correlation with all bodies that had an overlapping bill. These were the confirmed ducks. Next I setup a region of the screen as the active area and set up subdivisions of that area. Each duck was assigned a subdivision based on it's body contour center. At the end of every frame I iterated over the subdivisions and and sent a message via OSC either a -1 if there was no duck or the angle between the duck body center and the duck bill center if there was a duck in the subdivision. The idea with sending the angle was that we could use the duck orientation to modulate the audio in some way. In practice this number was too noisy to be useful and in the audio system we only checked if the value was greater than -1. I feel this could be solved with a different camera setup and some smarter filtering. 
+
+p The Pure Data patch consist of two sub patches first the OSC receiver which receives the OSC messages and writes the values into a table. The second sub patch was the step sequencer. The core of the patch is a metronome element that increments a counter on a regular interval. When the value increments it triggers audio clips if the current value in the values table for the current column is greater than -1. There are 5 different rows that can play on any given tick.
+
+p The project ended up being a lot of fun to build beats with. Many of us in the office spent a fair amount of time moving the small army of ducks around trying to make the sickest beats. 
+
+p We have some ideas for more that we'd like to do with this project including different form factors, a camera under a glass table for instance, a different audio  system that advances slower but uses longer loops and a system that tracks duck orientations to affect the sounds.
+
+p 
+  | samples via 
+  a(href='http://www.kaleidoscopiclabel.net/free-sounds-n-samples.html') http://www.kaleidoscopiclabel.net/free-sounds-n-samples.html
+
